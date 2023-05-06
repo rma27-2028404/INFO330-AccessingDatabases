@@ -1,5 +1,9 @@
 import sqlite3  # This is the package for all sqlite3 access in Python
-import sys      # This helps with command-line parameters
+import sys
+from unicodedata import name      # This helps with command-line parameters
+
+conn = sqlite3.connect('../pokemon.sqlite')
+c = conn.cursor()
 
 # All the "against" column suffixes:
 types = ["bug","dark","dragon","electric","fairy","fight",
@@ -16,12 +20,31 @@ for i, arg in enumerate(sys.argv):
     if i == 0:
         continue
 
-    # Analyze the pokemon whose pokedex_number is in "arg"
+    pokedex = int(arg)
+    pokemon_query = c.execute("SELECT name FROM pokemon WHERE id= " + arg)
+    
+    name = pokemon_query.fetchone()
+    print(name[0])
+    
+    type_query = c.execute("SELECT * FROM pokemon_types_view WHERE name = '" + name[0] + "'")
+    types = type_query.fetchall()
+    print(types[0][1:3])
 
-    # You will need to write the SQL, extract the results, and compare
-    # Remember to look at those "against_NNN" column values; greater than 1
-    # means the Pokemon is strong against that type, and less than 1 means
-    # the Pokemon is weak against that type
+    strengths = []
+    weaknesses = []
+    for t in types:
+            against = "against_" + t[0]
+            c.execute("SELECT {} FROM pokemon_types_battle_view WHERE type1name = ? AND type2name = ?".format(against), 
+            (types))
+            against_values = c.fetchone()[0]
+            if against_values > 1:
+                strengths.append(t)
+            elif against_values < 1:
+                weaknesses.append(t)
+    print("Analyzing", arg)
+    print(name, "(" + types, ")", "is strong against", strengths, "but weak against", weaknesses)
+    team.append((name, arg))
+ 
 
 answer = input("Would you like to save this team? (Y)es or (N)o: ")
 if answer.upper() == "Y" or answer.upper() == "YES":
@@ -32,3 +55,4 @@ if answer.upper() == "Y" or answer.upper() == "YES":
 else:
     print("Bye for now!")
 
+conn.close()
